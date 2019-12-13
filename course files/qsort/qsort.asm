@@ -1,14 +1,14 @@
 .global _start 
 
-.bss
-.lcomm ARRAY, 4000000
-
-.data
+.section .data
+junkbuffer: .space 1
 inputbuffer: .space 8
-outputbuffer: .space 8
+outputbuffer: .space 9
 read_descroptor: .quad 0
 write_descroptor: .quad 0
 
+.bss
+.lcomm Arr, 4000000
 
 .text
 _start:
@@ -21,29 +21,14 @@ _start:
 	# Good Luck!
 	# Don't forget to exit(0)
 
-open_file:
-movq $2, %rax # sys_open
-movq 8(%rbx), %rdi # argv[1] - input.txt path
-movq O_RDONLY, %rsi # open file to read only
-syscall
-
-movq %rax, read_descroptor # save input_descroptor
-
-read_file:
-movq $0, %rax # sys_read
-movq $read_descroptor, %rdi # input_descroptor to read_file
-movq $inputbuffer, %rsi # output of read_file
-movq $8, %rdx # num of bytes to read
+movq $Arr, %rdi # int* arr to file_to_array - arg1
+movq 8(%rbx), %rsi # argv[1] - input.txt path - arg2
+call file_to_array
 
 
-movq ($inputbuffer), %rdi # char* to atoi_hex
-call atoi_hex
-movl %eax, ($ARRAY,0,8) # ARRAY[0]= atoi_hex of line 1
-
-
-movq ($ARRAY,0,8), %rdi # int to itoa_hex
+movl Arr(,%r12,4), %edi # int to itoa_hex
 call itoa_hex
-movq %rax, ($outputbuffer) # outputbuffer= itoa_hex of ARRAY[0]
+movq %rax, outputbuffer # outputbuffer= itoa_hex of ARRAY[0]
 
 
 creat_to_write_file:
@@ -52,13 +37,13 @@ movq 16(%rbx), %rdi # # argv[2] - output.txt path
 movq $0777, %rsi # read/write/execute flag
 syscall
 
-movq %rax, ($write_descroptor) # save output_descroptor
+movq %rax, write_descroptor # save output_descroptor
 
 write_file:
 movq $1, %rax # sys_write
-movq (write_descroptor), %rdi # input_descroptor to write_file
-movq $outputbuffer, %rsi # string path to write to file
-movq $8, %rdx # num of byte to write
+movq write_descroptor, %rdi # input_descroptor to write_file
+movq outputbuffer, %rsi # string path to write to file
+movq $9, %rdx # num of byte to write
 syscall
 
 close_input_file:
@@ -78,6 +63,52 @@ xor %rdi, %rdi
 syscall
 
 
+# void file_to_array(int* array, char* path)
+file_to_array:
+    pushq %rbp # save old %rbp
+    movq %rsp, %rbp # change %rbp
+    pushq %rbx # calee save register
+    pushq %r12 # calee save register
+    pushq %r13 # calee save register
+    
+    movq %rdi, %r12 # %r12 = int* array
+    movq %rsi, %r13 # %r13 = char* path
+    
+    open_file:
+    movq $2, %rax # sys_open
+    movq (%r13), %rdi # argv[1] - input.txt path
+    movq $0, %rsi # open file to read only
+    syscall
+    
+    movq %rax, read_descroptor # save input_descroptor
+    
+    read_file_number:
+    movq $0, %rax # sys_read
+    movq read_descroptor, %rdi # input_descroptor to read_file
+    movq $inputbuffer, %rsi # output of read_file
+    movq $8, %rdx # num of bytes to read
+    syscall
+    
+    read_file_\n:
+    movq $0, %rax # sys_read
+    movq read_descroptor, %rdi # input_descroptor to read_file
+    movq $junkbuffer, %rsi # output of read_file
+    movq $1, %rdx # num of bytes to read
+    syscall
+    
+    movq $inputbuffer, %rdi # char* to atoi_hex
+    call atoi_hex
+    movq $1, %r12 # i=1
+    movl %eax, %r12(,%r12,4) # ARRAY[i]= atoi_hex of line 1
+    
+   
+   
+    movq -24(%rbp), %r13 # restore %r13 from stack
+    movq -16(%rbp), %r12 # restore %r12 from stack
+    movq -8(%rbp), %rbx # restore %rbx from stack
+    leave # restore %rsp and %rbp
+    ret
+    
 
 
 #
