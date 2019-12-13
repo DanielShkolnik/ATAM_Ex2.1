@@ -16,7 +16,7 @@ _start:
 	# look at libc's _start for more information
 	# https://code.woboq.org/userspace/glibc/sysdeps/x86_64/start.S.html
 	movq (%rsp), %rax	# save argc in rax
-	lea 8(%rsp), %rbx	# save argv in rbx
+	lea 8(%rsp), %rbx	# save argv in rbx = char**
 	
 	# Good Luck!
 	# Don't forget to exit(0)
@@ -26,36 +26,10 @@ movq 8(%rbx), %rsi # argv[1] - input.txt path - arg2
 call file_to_array
 
 
-movl Arr(,%r12,4), %edi # int to itoa_hex
-call itoa_hex
-movq %rax, outputbuffer # outputbuffer= itoa_hex of ARRAY[0]
-
-
-creat_to_write_file:
-movq $85, %rax # sys_creat
-movq 16(%rbx), %rdi # # argv[2] - output.txt path
-movq $0777, %rsi # read/write/execute flag
-syscall
-
-movq %rax, write_descroptor # save output_descroptor
-
-write_file:
-movq $1, %rax # sys_write
-movq write_descroptor, %rdi # input_descroptor to write_file
-movq outputbuffer, %rsi # string path to write to file
-movq $9, %rdx # num of byte to write
-syscall
-
-close_input_file:
-movq $3, %rax # sys_close
-movq (read_descroptor), %rdi # input_descroptor to close
-syscall
-
-
-close_output_file:
-movq $3, %rax # sys_close
-movq (write_descroptor), %rdi # input_descroptor to close
-syscall
+movq $Arr, %rdi # int* arr to file_to_array - arg1
+movq 16(%rbx), %rsi # argv[1] - input.txt path - arg2
+movq %rax, %rdx # length of array to arg3
+call array_to_file
 
 exit:
 mov $60, %rax # sys_exit
@@ -63,24 +37,26 @@ xor %rdi, %rdi
 syscall
 
 
-# void file_to_array(int* array, char* path)
+# int file_to_array(int* array, char* path)
 file_to_array:
     pushq %rbp # save old %rbp
     movq %rsp, %rbp # change %rbp
     pushq %rbx # calee save register
     pushq %r12 # calee save register
     pushq %r13 # calee save register
-    
+    pushq %r14 # calee save register
     movq %rdi, %r12 # %r12 = int* array
     movq %rsi, %r13 # %r13 = char* path
     
     open_file:
     movq $2, %rax # sys_open
-    movq (%r13), %rdi # argv[1] - input.txt path
+    movq %r13, %rdi # argv[1] - input.txt path
     movq $0, %rsi # open file to read only
     syscall
     
     movq %rax, read_descroptor # save input_descroptor
+    
+    movq $0, %r14 # i=0
     
     read_file_number:
     movq $0, %rax # sys_read
@@ -89,7 +65,10 @@ file_to_array:
     movq $8, %rdx # num of bytes to read
     syscall
     
-    read_file_\n:
+    cmp $8, %rax # checks if number of bytes read is less then 8 
+    jl end_file_to_array 
+    
+    read_file_end_line:
     movq $0, %rax # sys_read
     movq read_descroptor, %rdi # input_descroptor to read_file
     movq $junkbuffer, %rsi # output of read_file
@@ -98,17 +77,82 @@ file_to_array:
     
     movq $inputbuffer, %rdi # char* to atoi_hex
     call atoi_hex
-    movq $1, %r12 # i=1
-    movl %eax, %r12(,%r12,4) # ARRAY[i]= atoi_hex of line 1
     
-   
-   
+    movl %eax, (%r12,%r14,4) # ARRAY[i]= atoi_hex of line 1
+    inc %r14
+    jmp read_file_number
+    
+    end_file_to_array:
+    close_input_file:
+    movq $3, %rax # sys_close
+    movq (read_descroptor), %rdi # input_descroptor to close
+    syscall
+    
+    movq %r14,%rax # return length of Arr
+    movq -32(%rbp), %r14 # restore %r14 from stack
     movq -24(%rbp), %r13 # restore %r13 from stack
     movq -16(%rbp), %r12 # restore %r12 from stack
     movq -8(%rbp), %rbx # restore %rbx from stack
     leave # restore %rsp and %rbp
     ret
     
+# void file_to_array(int* array, char* path, int length)
+array_to_file:
+    pushq %rbp # save old %rbp
+    movq %rsp, %rbp # change %rbp
+    pushq %rbx # calee save register
+    pushq %r12 # calee save register
+    pushq %r13 # calee save register
+    pushq %r14 # calee save register
+    pushq %r15 # calee save register
+    movq %rdi, %r12 # %r12 = int* array
+    movq %rsi, %r13 # %r13 = char* path
+    movq %rdx, %r15 # %r15 = length of array
+
+    movq $0,%r14 # i=0
+    
+    creat_to_write_file:
+    movq $85, %rax # sys_creat
+    movq %r13, %rdi # # argv[2] - output.txt path
+    movq $0777, %rsi # read/write/execute flag
+    syscall
+    
+    movq %rax, write_descroptor # save output_descroptor
+    
+    start_loop:
+    movl (%r12,%r14,4), %edi # Arr[i] to itoa_hex
+    call itoa_hex
+    movq %rax, outputbuffer # outputbuffer= itoa_hex of ARRAY[i]
+    
+    write_file:
+    movq $1, %rax # sys_write
+    movq write_descroptor, %rdi # input_descroptor to write_file
+    movq outputbuffer, %rsi # string path to write to file
+    movq $9, %rdx # num of byte to write
+    syscall
+    inc %r14 # i++
+    cmp %r14, %r15
+    jle end_array_to_file
+    jmp start_loop
+    
+    end_array_to_file:
+    close_output_file:
+    movq $3, %rax # sys_close
+    movq (write_descroptor), %rdi # input_descroptor to close
+    syscall
+    
+    movq -40(%rbp), %r14 # restore %r14 from stack
+    movq -32(%rbp), %r14 # restore %r14 from stack
+    movq -24(%rbp), %r13 # restore %r13 from stack
+    movq -16(%rbp), %r12 # restore %r12 from stack
+    movq -8(%rbp), %rbx # restore %rbx from stack
+    leave # restore %rsp and %rbp
+    ret
+
+
+
+
+
 
 
 #
