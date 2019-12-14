@@ -24,11 +24,17 @@ _start:
 movq $Arr, %rdi # int* arr to file_to_array - arg1
 movq 8(%rbx), %rsi # argv[1] - input.txt path - arg2
 call file_to_array
+movq %rax, %r12 # temp = array_length
+
+
+movq $Arr, %rdi # int* arr to quick_sort - arg1
+movq %r12, %rsi #  array_length to quick_sort - arg2
+call quick_sort
 
 
 movq $Arr, %rdi # int* arr to file_to_array - arg1
 movq 16(%rbx), %rsi # argv[1] - input.txt path - arg2
-movq %rax, %rdx # length of array to arg3
+movq %r12, %rdx # length of array - arg3
 call array_to_file
 
 exit:
@@ -113,7 +119,7 @@ array_to_file:
     
     creat_to_write_file:
     movq $85, %rax # sys_creat
-    movq %r13, %rdi # # argv[2] - output.txt path
+    movq %r13, %rdi # argv[2] - output.txt path
     movq $0777, %rsi # read/write/execute flag
     syscall
     
@@ -141,7 +147,7 @@ array_to_file:
     movq (write_descroptor), %rdi # input_descroptor to close
     syscall
     
-    movq -40(%rbp), %r14 # restore %r14 from stack
+    movq -40(%rbp), %r15 # restore %r15 from stack
     movq -32(%rbp), %r14 # restore %r14 from stack
     movq -24(%rbp), %r13 # restore %r13 from stack
     movq -16(%rbp), %r12 # restore %r12 from stack
@@ -155,6 +161,127 @@ array_to_file:
 
 
 
+# void quick_sort(int* array, int length)
+quick_sort:
+    pushq %rbp # save old %rbp
+    movq %rsp, %rbp # change %rbp
+    pushq %rbx # calee save register - array[]
+    pushq %r12 # calee save register - array_length
+    pushq %r13 # calee save register - p
+    pushq %r14 # calee save register - b
+    pushq %r15 # calee save register - t
+    movq %rdi, %r12 # %r12 = int* array
+    movq %rsi, %r13 # %r13 = length of array
+    
+    quick_sort_loop:
+    movq $1, %r14 # b=1
+    movq %r13, %r15 # t=n
+    dec %r15 # t=n-1
+    cmp $2, %rsi # check if(n<2)
+    jl quick_sort_return # return
+    
+    xor %rcx, %rcx # rcx=0
+    leaq (%r12,%rcx,4), %rdi # &array[0] - swap arg1
+    movq %r13, %rax # rax=array_length
+    movq $2, %rcx # rcx=2
+    xor %rdx, %rdx # rdx=0
+    div %rcx # rax=n/2
+    leaq (%r12,%rax,4), %rsi # &array[n/2] - swap arg2
+    call swap
+    
+    while: # b<=t
+        cmp %r14, %r15 # check if(b<=t)
+        jl end_while
+        while_t: # t>=b && a[t]>=p
+        cmp %r14, %r15 # check if(b<=t)
+        jl end_while_t
+        movl (%r12,%r15,4), %ecx # ecx = a[t]
+        cmp %r13, %rcx # check if(a[t]>=p)
+        jl end_while_t
+        dec %r15 # t--
+        jmp while_t
+        
+        end_while_t: 
+        while_b:
+        cmp %r14, %r15 # check if(b<=t)
+        jl end_while_b
+        movl (%r12,%r14,4), %ecx # ecx = a[b]
+        cmp %r13, %rcx # check if(a[b]<p)
+        jge end_while_b
+        inc %r14 # b++
+        jmp while_b
+        
+        end_while_b:
+        cmp %r14, %r15 # check if(b<t)
+        jle while
+        # swap(&a[b++], &a[t--]);
+        movq %r14, %rcx # rcx=b
+        leaq (%r12,%rcx,4), %rdi # &array[b++] - swap arg1
+        movq %r15, %rcx # rcx=t
+        leaq (%r12,%rcx,4), %rsi # &array[t--] - swap arg2
+        call swap
+        inc %r14 # b++
+        dec %r15 # t--
+        jmp while
+        
+        
+    end_while:
+        # swap(&a[0], &a[t]);
+        xor %rcx, %rcx # rcx=0
+        leaq (%r12,%rcx,4), %rdi # &array[0] - swap arg1
+        movq %r15, %rcx # rcx=t
+        leaq (%r12,%rcx,4), %rsi # &array[t] - swap arg2
+        call swap
+    
+    # quick_sort(a, t);
+    movq %r12, %rdi # int* arr to file_to_array - arg1
+    movq %r15, %rsi #  length of array - arg2
+    call quick_sort
+    
+    
+    # quick_sort(a + t + 1, n  t - 1);
+    leaq 1(%r12,%r15,4), %rdi # a[t+1] to quick_sort - arg1
+    xor %rax, %rax # rax = 0
+    sub %r15, %rax # rax =-t
+    dec %rax # rax = -t-1
+    add %r13, %rax # rax = n-t-1
+    movq %rax, %rsi #  n-t-1 to quick_sort - arg2
+    call quick_sort
+    
+    
+   
+    quick_sort_return:
+    movq -40(%rbp), %r15 # restore %r15 from stack
+    movq -32(%rbp), %r14 # restore %r14 from stack
+    movq -24(%rbp), %r13 # restore %r13 from stack
+    movq -16(%rbp), %r12 # restore %r12 from stack
+    movq -8(%rbp), %rbx # restore %rbx from stack
+    leave # restore %rsp and %rbp
+    ret
+    
+    
+    
+    
+    # void swap(int* a, int* b) 
+swap:
+    pushq %rbp # save old %rbp
+    movq %rsp, %rbp # change %rbp
+    
+    # edi = *a, esi = *b
+    
+    movl (%edi), %r8d # temp1 = a*
+    movl (%esi), %r9d # temp2 = b*
+    movl %r8d, (%esi) # b* = temp1
+    movl %r9d, (%edi) # a* = temp2
+    
+    leave
+    ret
+      
+    
+    
+    
+    
+    
 #
 # ***** <DO NOT MODIFY> *****
 #
