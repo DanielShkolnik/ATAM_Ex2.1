@@ -242,7 +242,7 @@ quick_sort:
     
     
     # quick_sort(a + t + 1, n  t - 1);
-    leaq 1(%r12,%r15,4), %rdi # a[t+1] to quick_sort - arg1
+    leaq 4(%r12,%r15,4), %rdi # a[t+1] to quick_sort - arg1
     xor %rax, %rax # rax = 0
     sub %r15, %rax # rax =-t
     dec %rax # rax = -t-1
