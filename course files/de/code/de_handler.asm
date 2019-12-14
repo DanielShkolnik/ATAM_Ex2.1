@@ -22,3 +22,4 @@ my_get_interrupts_counter:
   #TODO: implement :)
   xor %eax, %eax
   ret
+
