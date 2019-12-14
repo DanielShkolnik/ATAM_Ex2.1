@@ -165,9 +165,9 @@ array_to_file:
 quick_sort:
     pushq %rbp # save old %rbp
     movq %rsp, %rbp # change %rbp
-    pushq %rbx # calee save register - array[]
-    pushq %r12 # calee save register - array_length
-    pushq %r13 # calee save register - p
+    pushq %rbx # calee save register - p
+    pushq %r12 # calee save register - array[]
+    pushq %r13 # calee save register - array_length
     pushq %r14 # calee save register - b
     pushq %r15 # calee save register - t
     movq %rdi, %r12 # %r12 = int* array
@@ -188,6 +188,8 @@ quick_sort:
     div %rcx # rax=n/2
     leaq (%r12,%rax,4), %rsi # &array[n/2] - swap arg2
     call swap
+    xor %rdx, %rdx # rdx=0
+    movl (%r12,%rdx,4), %ebx # ebx=array[0]
     
     while: # b<=t
         cmp %r14, %r15 # check if(b<=t)
@@ -196,7 +198,7 @@ quick_sort:
         cmp %r14, %r15 # check if(b<=t)
         jl end_while_t
         movl (%r12,%r15,4), %ecx # ecx = a[t]
-        cmp %r13, %rcx # check if(a[t]>=p)
+        cmp %ebx, %ecx # check if(a[t]>=p)
         jl end_while_t
         dec %r15 # t--
         jmp while_t
@@ -206,7 +208,7 @@ quick_sort:
         cmp %r14, %r15 # check if(b<=t)
         jl end_while_b
         movl (%r12,%r14,4), %ecx # ecx = a[b]
-        cmp %r13, %rcx # check if(a[b]<p)
+        cmp %ebx, %ecx # check if(a[b]<p)
         jge end_while_b
         inc %r14 # b++
         jmp while_b
