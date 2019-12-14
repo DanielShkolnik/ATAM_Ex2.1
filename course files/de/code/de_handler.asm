@@ -15,17 +15,10 @@ my_de_handler:
   # * CS
   # * RIP
   # * (errorcode for several interrupts, but not for divide error)
-<<<<<<< HEAD
 
-  iretq
+  iretq # asd
 
-=======
-  
-  iretq
-  
->>>>>>> ccb1b6ea961d7b2c77f99e96e7aa9640470cd471
 my_get_interrupts_counter:
   #TODO: implement :)
   xor %eax, %eax
   ret
-

@@ -2,10 +2,7 @@
 
 void my_store_idt(struct desc_ptr *idtr) {
 	//TODO: store current IDTR in memory adress idtr
-<<<<<<< HEAD
-	
-=======
->>>>>>> ccb1b6ea961d7b2c77f99e96e7aa9640470cd471
+	//asd
 }
 
 void my_load_idt(struct desc_ptr *idtr) {
