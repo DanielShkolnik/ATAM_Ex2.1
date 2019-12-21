@@ -6,7 +6,6 @@ inputbuffer: .space 8
 outputbuffer: .space 9
 read_descroptor: .quad 0
 write_descroptor: .quad 0
-
 .bss
 .lcomm Arr, 4000000
 .lcomm ArrStr, 9000000
@@ -122,8 +121,8 @@ array_to_file:
     movq %r13, %rdi # argv[2] - output.txt path
     movq $0777, %rsi # read/write/execute flag
     syscall
-
     movq %rax, write_descroptor # save output_descroptor
+
 		movq $0, %rcx # j = 0
     start_loop:
     movl (%r12,%r14,4), %edi # Arr[i] to itoa_hex
@@ -144,13 +143,13 @@ array_to_file:
 
     end_array_to_file:
 		write_file:
-    movq $1, %rax # sys_write
     movq write_descroptor, %rdi # input_descroptor to write_file
-    movq ArrStr, %rsi # string path to write to file
-		movq %r15, %rax # num of bytes to write is length * 5
+    movq $ArrStr, %rsi # string path to write to file
+		movq %r15, %rax # num of bytes to write is length * 9
 		movq $9, %rcx
 		mul %rcx
     movq %rax, %rdx # num of byte to write
+		movq $1, %rax # sys_write
     syscall
     close_output_file:
     movq $3, %rax # sys_close
