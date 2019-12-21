@@ -1,5 +1,5 @@
 .global my_de_handler, my_get_interrupts_counter
-.extern what_to_do, old_de_handler, print #TODO: fill externals
+.extern what_to_do, old_de_handler #TODO: fill externals
 
 .data
   counter: .long 0
