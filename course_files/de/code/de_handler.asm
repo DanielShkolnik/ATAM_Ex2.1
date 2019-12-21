@@ -2,7 +2,7 @@
 .extern what_to_do, old_de_handler, print #TODO: fill externals
 
 .data
-counter: .space 8
+  counter: .long 0
 .text
 .align 8, 0x90
 my_de_handler:
@@ -25,10 +25,21 @@ my_de_handler:
   cmp $0, %rax
   je old_handler
   movq 8(%rbp),%r8 # move rip to r8
+  # checks rip and inc accordingly to its first byte
+  cmpb $0xf7, (%r8)
+  je add_2
+  cmpb $0xf6, (%r8)
+  je add_2
+  add_3:
+  addq $3, %r8
+  jmp end_handler
+  add_2:
   addq $2, %r8 # rip += 2 bytes
+
+  end_handler:
   movq %r8, 8(%rbp) # saves new rip in stack
   movl $-1, %edx # move -1 to the remeinder
-  xorq %rax, %rax
+  movq %r9, %rax # puts quotient to what_to_do output
   leave
   iretq
 
